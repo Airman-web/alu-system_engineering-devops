@@ -14,12 +14,12 @@ hostname=$(hostname)
 # Configure Nginx to add custom header
 config_file="/etc/nginx/sites-available/default"
 
-# Check if the header already exists to avoid duplicates
-if ! grep -q "X-Served-By" "$config_file"; then
-    # Add custom header configuration in the server block
-    # We'll add it after the server_name directive
-    sed -i "/server_name _;/a \\\tadd_header X-Served-By $hostname;" "$config_file"
-fi
+# Remove any existing X-Served-By headers to avoid duplicates
+sed -i '/X-Served-By/d' "$config_file"
+
+# Add custom header in the server block after the location / block starts
+# This ensures it's properly placed within the server context
+sed -i "/location \/ {/a \\\t\tadd_header X-Served-By $hostname;" "$config_file"
 
 # Ensure Nginx is enabled to start on boot
 systemctl enable nginx
@@ -29,3 +29,11 @@ nginx -t
 
 # Restart Nginx to apply changes
 systemctl restart nginx
+
+# Verify the configuration worked
+sleep 2
+if curl -sI localhost | grep -q "X-Served-By"; then
+    echo "SUCCESS: X-Served-By header is configured"
+else
+    echo "ERROR: X-Served-By header not found"
+fi
