@@ -16,9 +16,6 @@ fi
 # Enable HAProxy to start on boot
 systemctl enable haproxy
 
-# Backup the original HAProxy configuration
-cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.backup
-
 # Stop nginx if it's running (to free port 80 for HAProxy)
 systemctl stop nginx 2>/dev/null || true
 systemctl disable nginx 2>/dev/null || true
@@ -50,8 +47,8 @@ frontend http_front
 
 backend http_back
     balance roundrobin
-    server 6830-web-01 52.87.245.215:80 check
-    server 6830-web-02 54.165.247.234:80 check
+    server web-01 52.87.245.215:80 check
+    server web-02 54.165.247.234:80 check
 EOF
 
 # Test HAProxy configuration
