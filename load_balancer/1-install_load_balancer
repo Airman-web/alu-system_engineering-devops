@@ -55,8 +55,8 @@ EOF
 if haproxy -c -f /etc/haproxy/haproxy.cfg; then
     # Restart HAProxy to apply changes
     systemctl restart haproxy
-    echo "web-01"
-    echo "web-02"
+    # Display configured backend servers
+    grep "server web-" /etc/haproxy/haproxy.cfg
 else
     echo "HAProxy configuration test failed"
     exit 1
