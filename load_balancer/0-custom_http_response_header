@@ -7,33 +7,44 @@
 apt-get update -y
 apt-get install -y nginx
 
+# Remove any problematic custom config files
+rm -f /etc/nginx/conf.d/custom_headers.conf
+
 # Get the hostname
 # shellcheck disable=SC2154
 hostname=$(hostname)
 
-# Configure Nginx to add custom header
-config_file="/etc/nginx/sites-available/default"
+# Backup the default configuration
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup
 
-# Remove any existing X-Served-By headers to avoid duplicates
-sed -i '/X-Served-By/d' "$config_file"
+# Create a clean configuration with the custom header
+cat > /etc/nginx/sites-available/default << EOF
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
 
-# Add custom header in the server block after the location / block starts
-# This ensures it's properly placed within the server context
-sed -i "/location \/ {/a \\\t\tadd_header X-Served-By $hostname;" "$config_file"
+    root /var/www/html;
+    index index.html index.htm index.nginx-debian.html;
+
+    server_name _;
+
+    add_header X-Served-By \$hostname;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+}
+EOF
 
 # Ensure Nginx is enabled to start on boot
 systemctl enable nginx
 
 # Test Nginx configuration
-nginx -t
-
-# Restart Nginx to apply changes
-systemctl restart nginx
-
-# Verify the configuration worked
-sleep 2
-if curl -sI localhost | grep -q "X-Served-By"; then
-    echo "SUCCESS: X-Served-By header is configured"
+if nginx -t 2>/dev/null; then
+    # Restart Nginx to apply changes
+    systemctl restart nginx
+    echo "Nginx configured successfully with X-Served-By header"
 else
-    echo "ERROR: X-Served-By header not found"
+    echo "Nginx configuration test failed"
+    exit 1
 fi
