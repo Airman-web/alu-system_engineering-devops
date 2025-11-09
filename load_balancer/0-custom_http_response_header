@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Configures Nginx with a custom HTTP response header
+# This script configures a brand new Ubuntu machine with Nginx
+# and adds a custom X-Served-By header with the server's hostname
+
+# Update package list and install Nginx
+apt-get update -y
+apt-get install -y nginx
+
+# Get the hostname
+# shellcheck disable=SC2154
+hostname=$(hostname)
+
+# Configure Nginx to add custom header
+config_file="/etc/nginx/sites-available/default"
+
+# Check if the header already exists to avoid duplicates
+if ! grep -q "X-Served-By" "$config_file"; then
+    # Add custom header configuration in the server block
+    # We'll add it after the server_name directive
+    sed -i "/server_name _;/a \\\tadd_header X-Served-By $hostname;" "$config_file"
+fi
+
+# Ensure Nginx is enabled to start on boot
+systemctl enable nginx
+
+# Test Nginx configuration
+nginx -t
+
+# Restart Nginx to apply changes
+systemctl restart nginx
