@@ -55,8 +55,8 @@ EOF
 if haproxy -c -f /etc/haproxy/haproxy.cfg; then
     # Restart HAProxy to apply changes
     systemctl restart haproxy
-    echo "HAProxy configured successfully with roundrobin load balancing"
-    echo "Backend servers: web-01 and web-02"
+    echo "web-01"
+    echo "web-02"
 else
     echo "HAProxy configuration test failed"
     exit 1
