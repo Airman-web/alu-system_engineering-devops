@@ -8,10 +8,12 @@ apt-get update -y
 apt-get install -y nginx
 
 # Ensure nginx runs in the background without using systemctl
-service nginx start
+ssh ubuntu@52.87.245.215
 
 # Replace default web page with Holberton School content
-echo "Holberton School for the win!" > /var/www/html/index.html
+cat <<EOF > /var/www/html/index.html
+Holberton School for the win!
+EOF
 
 # Ensure proper permissions
 chown www-data:www-data /var/www/html/index.html
