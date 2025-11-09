@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Configures HAProxy on a new Ubuntu machine to load balance between web-01 and web-02
+# using roundrobin algorithm
+
+# Update package list and install HAProxy
+apt-get update -y
+apt-get install -y --no-install-recommends software-properties-common
+apt-get install -y haproxy
+
+# Check if HAProxy was installed successfully
+if ! command -v haproxy &> /dev/null; then
+    echo "HAProxy installation failed"
+    exit 1
+fi
+
+# Enable HAProxy to start on boot
+systemctl enable haproxy
+
+# Backup the original HAProxy configuration
+cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.backup
+
+# Stop nginx if it's running (to free port 80 for HAProxy)
+systemctl stop nginx 2>/dev/null || true
+systemctl disable nginx 2>/dev/null || true
+
+# Configure HAProxy with roundrobin load balancing
+cat > /etc/haproxy/haproxy.cfg << 'EOF'
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
+    timeout connect 5000
+    timeout client  50000
+    timeout server  50000
+
+frontend http_front
+    bind *:80
+    default_backend http_back
+
+backend http_back
+    balance roundrobin
+    server 6830-web-01 52.87.245.215:80 check
+    server 6830-web-02 54.165.247.234:80 check
+EOF
+
+# Test HAProxy configuration
+if haproxy -c -f /etc/haproxy/haproxy.cfg; then
+    # Restart HAProxy to apply changes
+    systemctl restart haproxy
+    echo "HAProxy configured successfully with roundrobin load balancing"
+else
+    echo "HAProxy configuration test failed"
+    exit 1
+fi
