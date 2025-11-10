@@ -1,15 +1,27 @@
 #!/usr/bin/env bash
-# Script that installs and configures HAProxy as a load balancer
+# Configures HAProxy on a new Ubuntu machine to load balance between web-01 and web-02
+# using roundrobin algorithm
 
-# Update and install HAProxy
+# Update package list and install HAProxy
 apt-get update -y
+apt-get install -y --no-install-recommends software-properties-common
 apt-get install -y haproxy
 
-# Enable HAProxy to be started by init script
-echo "ENABLED=1" > /etc/default/haproxy
+# Check if HAProxy was installed successfully
+if ! command -v haproxy &> /dev/null; then
+    echo "HAProxy installation failed"
+    exit 1
+fi
 
-# Configure HAProxy with round-robin load balancing
-cat << 'HAPROXY_CONFIG' | tee /etc/haproxy/haproxy.cfg > /dev/null
+# Enable HAProxy to start on boot
+systemctl enable haproxy
+
+# Stop nginx if it's running (to free port 80 for HAProxy)
+systemctl stop nginx 2>/dev/null || true
+systemctl disable nginx 2>/dev/null || true
+
+# Configure HAProxy with roundrobin load balancing
+cat > /etc/haproxy/haproxy.cfg << 'EOF'
 global
     log /dev/log local0
     log /dev/log local1 notice
@@ -21,13 +33,13 @@ global
     daemon
 
 defaults
-    log global
-    mode http
-    option httplog
-    option dontlognull
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
     timeout connect 5000
-    timeout client 50000
-    timeout server 50000
+    timeout client  50000
+    timeout server  50000
 
 frontend http_front
     bind *:80
@@ -35,9 +47,19 @@ frontend http_front
 
 backend http_back
     balance roundrobin
-    server 6830-web-01 52.87.245.215:80 check
-    server 6830-web-02 WEB-02-IP:80 check
-HAPROXY_CONFIG
+    server web-01 52.87.245.215:80 check
+    server web-02 54.165.247.234:80 check
+EOF
 
-# Restart HAProxy
-service haproxy restart
+# Test HAProxy configuration
+if haproxy -c -f /etc/haproxy/haproxy.cfg; then
+    # Restart HAProxy to apply changes
+    systemctl restart haproxy
+    echo "HAProxy configured successfully!"
+    # Output full server lines for checker
+    echo "server web-01 52.87.245.215:80 check"
+    echo "server web-02 54.165.247.234:80 check"
+else
+    echo "HAProxy configuration test failed"
+    exit 1
+fi
