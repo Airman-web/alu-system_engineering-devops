@@ -1,27 +1,15 @@
 #!/usr/bin/env bash
-# Configures HAProxy on a new Ubuntu machine to load balance between web-01 and web-02
-# using roundrobin algorithm
+# Script that installs and configures HAProxy as a load balancer
 
-# Update package list and install HAProxy
+# Update and install HAProxy
 apt-get update -y
-apt-get install -y --no-install-recommends software-properties-common
 apt-get install -y haproxy
 
-# Check if HAProxy was installed successfully
-if ! command -v haproxy &> /dev/null; then
-    echo "HAProxy installation failed"
-    exit 1
-fi
+# Enable HAProxy to be started by init script
+echo "ENABLED=1" > /etc/default/haproxy
 
-# Enable HAProxy to start on boot
-systemctl enable haproxy
-
-# Stop nginx if it's running (to free port 80 for HAProxy)
-systemctl stop nginx 2>/dev/null || true
-systemctl disable nginx 2>/dev/null || true
-
-# Configure HAProxy with roundrobin load balancing
-cat > /etc/haproxy/haproxy.cfg << 'EOF'
+# Configure HAProxy with round-robin load balancing
+cat << 'HAPROXY_CONFIG' | tee /etc/haproxy/haproxy.cfg > /dev/null
 global
     log /dev/log local0
     log /dev/log local1 notice
@@ -33,13 +21,13 @@ global
     daemon
 
 defaults
-    log     global
-    mode    http
-    option  httplog
-    option  dontlognull
+    log global
+    mode http
+    option httplog
+    option dontlognull
     timeout connect 5000
-    timeout client  50000
-    timeout server  50000
+    timeout client 50000
+    timeout server 50000
 
 frontend http_front
     bind *:80
@@ -47,19 +35,9 @@ frontend http_front
 
 backend http_back
     balance roundrobin
-    server web-01 52.87.245.215:80 check
-    server web-02 54.165.247.234:80 check
-EOF
+    server 6830-web-01 52.87.245.215:80 check
+    server 6830-web-02 WEB-02-IP:80 check
+HAPROXY_CONFIG
 
-# Test HAProxy configuration
-# Test HAProxy configuration
-if haproxy -c -f /etc/haproxy/haproxy.cfg; then
-    # Restart HAProxy to apply changes
-    systemctl restart haproxy
-    # Output server names for the checker
-    echo "web-01"
-    echo "web-02"
-else
-    echo "HAProxy configuration test failed"
-    exit 1
-fi
+# Restart HAProxy
+service haproxy restart
