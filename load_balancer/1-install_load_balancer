@@ -3,9 +3,9 @@
 # using roundrobin algorithm
 
 # Update package list and install HAProxy
-apt-get update -y
-apt-get install -y --no-install-recommends software-properties-common
-apt-get install -y haproxy
+sudo apt-get update -y
+sudo apt-get install -y --no-install-recommends software-properties-common
+sudo apt-get install -y haproxy
 
 # Check if HAProxy was installed successfully
 if ! command -v haproxy &> /dev/null; then
@@ -14,14 +14,14 @@ if ! command -v haproxy &> /dev/null; then
 fi
 
 # Enable HAProxy to start on boot
-systemctl enable haproxy
+sudo systemctl enable haproxy
 
 # Stop nginx if it's running (to free port 80 for HAProxy)
-systemctl stop nginx 2>/dev/null || true
-systemctl disable nginx 2>/dev/null || true
+sudo systemctl stop nginx 2>/dev/null || true
+sudo systemctl disable nginx 2>/dev/null || true
 
 # Configure HAProxy with roundrobin load balancing
-cat > /etc/haproxy/haproxy.cfg << 'EOF'
+sudo tee /etc/haproxy/haproxy.cfg << 'EOF'
 global
     log /dev/log local0
     log /dev/log local1 notice
@@ -52,9 +52,9 @@ backend http_back
 EOF
 
 # Test HAProxy configuration
-if haproxy -c -f /etc/haproxy/haproxy.cfg; then
+if sudo haproxy -c -f /etc/haproxy/haproxy.cfg; then
     # Restart HAProxy to apply changes
-    systemctl restart haproxy
+    sudo systemctl restart haproxy
     echo "HAProxy configured successfully!"
     # Output full server lines for checker
     echo "server web-01 52.87.245.215:80 check"
