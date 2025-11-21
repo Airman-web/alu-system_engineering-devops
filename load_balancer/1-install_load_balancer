@@ -1,65 +1,29 @@
 #!/usr/bin/env bash
-# Configures HAProxy on a new Ubuntu machine to load balance between web-01 and web-02
-# using roundrobin algorithm
+#Distribute traffic to web-01 & web-02 servers through lb-01 HAProxy
 
-# Update package list and install HAProxy
-sudo apt-get update -y
-sudo apt-get install -y --no-install-recommends software-properties-common
-sudo apt-get install -y haproxy
 
-# Check if HAProxy was installed successfully
-if ! command -v haproxy &> /dev/null; then
-    echo "HAProxy installation failed"
-    exit 1
-fi
+# Install & configure HAproxy on lb-01 server.
+sudo apt-get -y update
+sudo apt-get -y install haproxy
 
-# Enable HAProxy to start on boot
-sudo systemctl enable haproxy
+# append lb config to config file
+config=\
+"
+frontend eke_front
+        bind *:80
+        mode http
+        default_backend eke_back
 
-# Stop nginx if it's running (to free port 80 for HAProxy)
-sudo systemctl stop nginx 2>/dev/null || true
-sudo systemctl disable nginx 2>/dev/null || true
+backend eke_back
+        balance roundrobin
+        server 6414-web-01 3.93.240.46:80 check
+        server 6414-web-02 54.227.209.123:80 check
+"
+echo "$config" | sudo tee -a /etc/haproxy/haproxy.cfg
 
-# Configure HAProxy with roundrobin load balancing
-sudo tee /etc/haproxy/haproxy.cfg << 'EOF'
-global
-    log /dev/log local0
-    log /dev/log local1 notice
-    chroot /var/lib/haproxy
-    stats socket /run/haproxy/admin.sock mode 660 level admin
-    stats timeout 30s
-    user haproxy
-    group haproxy
-    daemon
+# enable init script startup for haproxy
+echo "ENABLED=1" | sudo tee -a /etc/default/haproxy
 
-defaults
-    log     global
-    mode    http
-    option  httplog
-    option  dontlognull
-    timeout connect 5000
-    timeout client  50000
-    timeout server  50000
-
-frontend http_front
-    bind *:80
-    default_backend http_back
-
-backend http_back
-    balance roundrobin
-    server web-01 52.87.245.215:80 check
-    server web-02 54.165.247.234:80 check
-EOF
-
-# Test HAProxy configuration
-if sudo haproxy -c -f /etc/haproxy/haproxy.cfg; then
-    # Restart HAProxy to apply changes
-    sudo systemctl restart haproxy
-    echo "HAProxy configured successfully!"
-    # Output full server lines for checker
-    echo "server web-01 52.87.245.215:80 check"
-    echo "server web-02 54.165.247.234:80 check"
-else
-    echo "HAProxy configuration test failed"
-    exit 1
-fi
+# confirm config is valid and restart haproxy
+sudo haproxy -c -f /etc/haproxy/haproxy.cfg
+sudo service haproxy restart
