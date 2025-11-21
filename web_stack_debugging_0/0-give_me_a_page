@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Fix Apache and make it serve Hello Holberton
+
+apt-get update
+apt-get install -y apache2
+service apache2 start
+echo "Hello Holberton" > /var/www/html/index.html
