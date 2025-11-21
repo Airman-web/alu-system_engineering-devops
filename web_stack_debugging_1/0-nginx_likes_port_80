@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# Fix Nginx and ensure it listens on port 80
+# Install Nginx and ensure it listens on port 80 on all IPv4 interfaces
 
+set -e
+
+# Non-interactive install
+export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y nginx
 
-# Stop conflicting service if any
-fuser -k 80/tcp 2>/dev/null || true
+# Make sure Nginx listens on all IPv4 addresses
+sed -i 's/listen 80 default_server;/listen 80 default_server;\nlisten [::]:80 default_server;/' /etc/nginx/sites-available/default
+
+# Ensure the web root exists and default page is present
+mkdir -p /var/www/html
+echo "Welcome to nginx!" > /var/www/html/index.html
 
 # Start Nginx
-service nginx start
-
-# Confirm listening
-ss -tulpn | grep :80
+service nginx restart
