@@ -9,7 +9,10 @@ apt-get update
 apt-get install -y nginx
 
 # Make sure Nginx listens on all IPv4 addresses
-sed -i 's/listen 80 default_server;/listen 80 default_server;\nlisten [::]:80 default_server;/' /etc/nginx/sites-available/default
+# Add an IPv6 listen line after the IPv4 listen line only if it's not already present
+if ! grep -q "listen [::]:80 default_server;" /etc/nginx/sites-available/default; then
+  sed -i '/listen 80 default_server;/a listen [::]:80 default_server;' /etc/nginx/sites-available/default
+fi
 
 # Ensure the web root exists and default page is present
 mkdir -p /var/www/html
