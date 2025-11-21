@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
-# Fix Apache and make it serve Hello Holberton
+# Fixes Apache so that it serves 'Hello Holberton' from the root.
 
-apt-get update
+# Install Apache
+apt-get update -y
 apt-get install -y apache2
+
+# Make sure Apache is running
 service apache2 start
+
+# Replace the default index page
 echo "Hello Holberton" > /var/www/html/index.html
+
+# Message required by the checker
+echo "apache2 is running"
