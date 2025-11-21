@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Fix Nginx and ensure it listens on port 80
+
+apt-get update
+apt-get install -y nginx
+
+# Stop conflicting service if any
+fuser -k 80/tcp 2>/dev/null || true
+
+# Start Nginx
+service nginx start
+
+# Confirm listening
+ss -tulpn | grep :80
