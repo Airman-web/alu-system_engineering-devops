@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Install Nginx, ensure it listens on port 80, and start the service
+# Install Nginx and ensure it listens on port 80, returning HTTP 200
 
-# Exit immediately if a command fails
+# Exit on errors
 set -e
 
-# Update package list and install Nginx
+# Non-interactive install
 export DEBIAN_FRONTEND=noninteractive
+
+# Update and install Nginx
 apt-get update -y
 apt-get install -y nginx
 
-# Ensure the default site listens on all IPv4 addresses
-sed -i 's/listen 80 default_server;/listen 80 default_server;\nlisten [::]:80 default_server;/' /etc/nginx/sites-available/default
-
-# Ensure the web root exists and a default page is present
+# Ensure web root and index page exist
 mkdir -p /var/www/html
-echo "Welcome to nginx!" > /var/www/html/index.html
+echo "Hello Holberton" > /var/www/html/index.html
 
-# Start Nginx
-service nginx restart
+# Restart Nginx (works inside containers)
+nginx -s stop 2>/dev/null || true
+nginx
